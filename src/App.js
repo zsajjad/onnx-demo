@@ -34,12 +34,11 @@ function App() {
 		ctx.drawImage(video.current, 0, 0, IMAGE_SIZE, IMAGE_SIZE);
 		// const onnxTensor = getTensorFromCanvasContext(ctx);
 		const onnxTensor = await canvasToTensor("srcCanvas");
-		inferenceSession.run([onnxTensor]).then(prediction => {
-			const output = prediction.values().next().value;
-			destination.current.getContext("2d");
-			tensorToCanvas(output, "dstCanvas");
-			// renderCanvas();
-		});
+		const prediction = await inferenceSession.run([onnxTensor]);
+		const output = prediction.values().next().value;
+		destination.current.getContext("2d");
+		tensorToCanvas(output, "dstCanvas");
+		setTimeout(renderCanvas, 100);
 	}, [canvas]);
 
 	const detectFrame = useCallback(() => {
@@ -86,6 +85,7 @@ function App() {
 				ref={canvas}
 				width={IMAGE_SIZE}
 				height={IMAGE_SIZE}
+				style={{ display: "none" }}
 			/>
 			<canvas
 				id="dstCanvas"
