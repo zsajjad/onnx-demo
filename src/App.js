@@ -4,20 +4,19 @@ import React, { useRef, useLayoutEffect, useCallback } from "react";
 import {
 	warmupModel,
 	getTensorFromCanvasContext,
-	setContextFromTensor
+	setContextFromTensor,
+	tensorToCanvas,
+	canvasToTensor
 } from "./onnx/utils";
-import logo from "./logo.svg";
 import "./App.css";
 
 let inferenceSession;
 
-const MODEL_URL = "./models/mosaic_nc8_zeropad_256x256.onnx";
+const MODEL_URL = "./models/rain-princess_nc16_256x256_onnxjs014.onnx";
 const IMAGE_SIZE = 256;
 
 const loadModel = async () => {
-	inferenceSession = await new InferenceSession({
-		backendHint: "webgl"
-	});
+	inferenceSession = await new InferenceSession();
 	await inferenceSession.loadModel(MODEL_URL);
 	await warmupModel(inferenceSession, [1, 3, IMAGE_SIZE, IMAGE_SIZE]);
 };
@@ -33,20 +32,20 @@ function App() {
 		canvas.current.height = IMAGE_SIZE;
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 		ctx.drawImage(video.current, 0, 0, IMAGE_SIZE, IMAGE_SIZE);
-		const onnxTensor = getTensorFromCanvasContext(ctx);
+		// const onnxTensor = getTensorFromCanvasContext(ctx);
+		const onnxTensor = await canvasToTensor("srcCanvas");
 		inferenceSession.run([onnxTensor]).then(prediction => {
 			const output = prediction.values().next().value;
-			const destinationContext = destination.current.getContext("2d");
-			setContextFromTensor(output, destinationContext);
-			setTimeout(() => {
-				renderCanvas();
-			}, 2000);
+			destination.current.getContext("2d");
+			tensorToCanvas(output, "dstCanvas");
+			// renderCanvas();
 		});
 	}, [canvas]);
 
 	const detectFrame = useCallback(() => {
 		renderCanvas();
 		// requestAnimationFrame(() => {
+		// 	renderCanvas();
 		// });
 	}, [renderCanvas]);
 
@@ -82,8 +81,18 @@ function App() {
 				width="256px"
 				height="256px"
 			/>
-			<canvas ref={canvas} />
-			<canvas ref={destination} />
+			<canvas
+				id="srcCanvas"
+				ref={canvas}
+				width={IMAGE_SIZE}
+				height={IMAGE_SIZE}
+			/>
+			<canvas
+				id="dstCanvas"
+				ref={destination}
+				width={IMAGE_SIZE}
+				height={IMAGE_SIZE}
+			/>
 		</div>
 	);
 }
